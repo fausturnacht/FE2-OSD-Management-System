@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Webcam from 'react-webcam';
-import Tesseract from 'tesseract.js';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Zap, Image as ImageIcon, Keyboard } from 'lucide-react';
 import Header from '../components/Header';
 import './ScanScreen.css';
@@ -24,35 +24,65 @@ const ScanScreen: React.FC = () => {
       setScanResult('Processing Image...');
 
       try {
-        // Run OCR with Tesseract
-        const { data: { text } } = await Tesseract.recognize(
-          imageSrc,
-          'eng',
-          { logger: m => console.log(m) }
-        );
+        console.log('All Env Vars:', import.meta.env);
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (!apiKey) {
+          throw new Error('VITE_GEMINI_API_KEY environment variable is missing.');
+        }
+
+        const genAI = new GoogleGenerativeAI(apiKey);
+        // Using gemini-3-flash-preview which matches the available API models for this key
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+
+        // Split "data:image/jpeg;base64,..." to get pure base64
+        const base64Data = imageSrc.split(',')[1];
         
-        console.log('OCR Raw Text:', text);
+        const prompt = `Extract the student information from this ID card image. 
+Return ONLY a JSON object exactly like:
+{
+  "studentId": "23-11865-994",
+  "name": "Lastname, Firstname M.",
+  "course": "BS Computer Science",
+  "college": "College of Engineering"
+}
+If a field is not recognizable, use null.
+Do not include markdown codeblocks or any other text.`;
+
+        const result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: base64Data,
+              mimeType: "image/jpeg"
+            }
+          }
+        ]);
+
+        const textResponse = result.response.text();
+        console.log('Gemini Raw Response:', textResponse);
         
-        // Very basic parsing attempt. In reality, would need robust regex for the specific ID format
-        // Looking for something that looks like an ID e.g., 23-11865-994
-        const idMatch = text.match(/\b\d{2}-\d{5}-\d{3}\b/);
+        let parsedResult: { studentId: string | null, name?: string, course?: string, college?: string } | null = null;
+        try {
+          parsedResult = JSON.parse(textResponse.trim());
+        } catch (jsonErr) {
+          console.error('Failed to parse Gemini response as JSON:', textResponse, jsonErr);
+        }
         
-        if (idMatch) {
-          setScanResult(`Found ID: ${idMatch[0]}`);
+        if (parsedResult?.studentId) {
+          setScanResult(`Found ID: ${parsedResult.studentId}`);
           setTimeout(() => {
-            navigate(`/profile/${idMatch[0]}`);
+            navigate(`/profile/${parsedResult.studentId}`, { state: { studentData: parsedResult } });
           }, 1500);
         } else {
-          // If no specific ID format found, just navigate to a mock ID for demo purposes
-          setScanResult('ID formatting not found in scan. Proceeding with mock data...');
+          setScanResult('ID not found in scan. Please try again.');
           setTimeout(() => {
-            // Mocking the navigation to John Doe's profile
-            navigate('/profile/21-04392-MN');
-          }, 2000);
+            setScanResult(null);
+            setIsProcessing(false);
+          }, 3000);
         }
-      } catch (err) {
-        console.error('OCR Error:', err);
-        setError('Failed to process image. Make sure the ID is clear.');
+      } catch (err: any) {
+        console.error('Gemini API Error:', err);
+        setError(err.message || 'Failed to process image. Make sure the ID is clear.');
         setIsProcessing(false);
       }
     }

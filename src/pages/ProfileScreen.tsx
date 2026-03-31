@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { TriangleAlert, BookOpen, Building2, Calendar, User, ShieldAlert, Edit2 } from 'lucide-react';
 import Header from '../components/Header';
 import './ProfileScreen.css';
@@ -25,7 +25,16 @@ const MOCK_PROFILE = {
 const ProfileScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const profile = MOCK_PROFILE; // Defaulting to mock
+  const location = useLocation();
+  const navigationData = location.state?.studentData;
+
+  const profile = {
+    ...MOCK_PROFILE,
+    id: id || navigationData?.studentId || MOCK_PROFILE.id,
+    name: navigationData?.name || MOCK_PROFILE.name,
+    course: navigationData?.course || MOCK_PROFILE.course,
+    college: navigationData?.college || MOCK_PROFILE.college,
+  };
 
   const progressPercent = ((profile.totalServiceHours - profile.communityServiceHours) / profile.totalServiceHours) * 100;
 

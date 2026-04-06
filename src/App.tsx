@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import ScanScreen from './pages/ScanScreen';
 import ProfileScreen from './pages/ProfileScreen';
 import ManualSearchScreen from './pages/ManualSearchScreen';
@@ -9,7 +9,7 @@ import './index.css';
 function App() {
   return (
     <div className="app-container">
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/" element={<Navigate to="/scan" />} />
           <Route path="/scan" element={<ScanScreen />} />
@@ -18,7 +18,7 @@ function App() {
           <Route path="/log-violation/:id" element={<LogViolationScreen />} />
         </Routes>
         <BottomNavigation />
-      </BrowserRouter>
+      </HashRouter>
     </div>
   );
 }

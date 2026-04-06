@@ -4,6 +4,7 @@ import Webcam from 'react-webcam';
 import Tesseract from 'tesseract.js';
 import { Zap, Image as ImageIcon, Keyboard } from 'lucide-react';
 import Header from '../components/Header';
+import { preprocessImage } from '../utils/imagePreprocess';
 import './ScanScreen.css';
 
 const ScanScreen: React.FC = () => {
@@ -12,6 +13,7 @@ const ScanScreen: React.FC = () => {
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [debugText, setDebugText] = useState<string>('');
+  const [processedImage, setProcessedImage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // A mock auto-capture to simulate finding an ID. We'll use manual button for this MVP.
@@ -25,9 +27,13 @@ const ScanScreen: React.FC = () => {
       setScanResult('Processing Image...');
 
       try {
+        console.log('Preprocessing image...');
+        const processed = await preprocessImage(imageSrc);
+        setProcessedImage(processed);
+
         console.log('Initializing Tesseract OCR...');
         const result = await Tesseract.recognize(
-          imageSrc,
+          processed,
           'eng',
           { logger: m => console.log(m) }
         );
@@ -83,16 +89,8 @@ const ScanScreen: React.FC = () => {
             facingMode: 'environment', // Use back camera on mobile
           }}
         />
-        <div className="scanner-overlay">
-          <div className="scanner-frame">
-            <div className="frame-corner top-left"></div>
-            <div className="frame-corner top-right"></div>
-            <div className="frame-corner bottom-left"></div>
-            <div className="frame-corner bottom-right"></div>
-          </div>
-          <div className="scanner-helper-text">
-            Align the vertical ID card within the frame to automatically scan details
-          </div>
+        <div className="scanner-helper-text" style={{ bottom: '20px', top: 'auto', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '4px' }}>
+          Focus the camera directly on the student ID numbers
         </div>
       </div>
 
@@ -116,6 +114,13 @@ const ScanScreen: React.FC = () => {
         )}
         {error && <div className="text-red-500 mt-2">{error}</div>}
       </div>
+
+      {processedImage && (
+        <div style={{ marginTop: '10px', textAlign: 'center' }}>
+          <strong style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Processed Image (What OCR sees):</strong>
+          <img src={processedImage} alt="Processed" style={{ maxWidth: '100%', height: 'auto', border: '1px solid #555' }} />
+        </div>
+      )}
 
       {debugText && (
         <div style={{ marginTop: '20px', padding: '10px', background: '#222', color: '#0f0', fontSize: '10px', whiteSpace: 'pre-wrap', textAlign: 'left', wordBreak: 'break-all', maxHeight: '150px', overflowY: 'auto' }}>

@@ -11,6 +11,7 @@ const ScanScreen: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [debugText, setDebugText] = useState<string>('');
   const navigate = useNavigate();
 
   // A mock auto-capture to simulate finding an ID. We'll use manual button for this MVP.
@@ -33,9 +34,10 @@ const ScanScreen: React.FC = () => {
 
         const textResponse = result.data.text;
         console.log('Tesseract Raw Response:', textResponse);
+        setDebugText(textResponse);
         
-        // Use Regex to find the student ID in the format XX-XXXXX-XXX
-        const idMatch = textResponse.match(/\b\d{2}-\d{5}-\d{3}\b/);
+        // Use Regex to find the student ID. Relaxed to account for OCR missing/replacing dashes with spaces, and no strict boundaries.
+        const idMatch = textResponse.match(/\d{2}[-\s]*\d{5}[-\s]*\d{3}/);
         
         if (idMatch && idMatch[0]) {
           const studentId = idMatch[0];
@@ -114,6 +116,13 @@ const ScanScreen: React.FC = () => {
         )}
         {error && <div className="text-red-500 mt-2">{error}</div>}
       </div>
+
+      {debugText && (
+        <div style={{ marginTop: '20px', padding: '10px', background: '#222', color: '#0f0', fontSize: '10px', whiteSpace: 'pre-wrap', textAlign: 'left', wordBreak: 'break-all', maxHeight: '150px', overflowY: 'auto' }}>
+          <strong>Debug OCR Output:</strong><br/>
+          {debugText}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,20 +1,17 @@
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { TriangleAlert, BookOpen, Building2, Calendar, User, ShieldAlert, Edit2 } from 'lucide-react';
+import { TriangleAlert, BookOpen, Building2, Calendar, User, ShieldAlert, Edit2, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import Header from '../components/Header';
+import { supabase } from '../utils/supabaseClient';
 import './ProfileScreen.css';
 
-// Mock Data
-const MOCK_PROFILE = {
-  id: '21-04392-MN',
-  name: 'Doe, John A.',
+// We'll keep dummy data for violations and hours for now since we haven't built out the full violations fetching logic yet.
+const MOCK_VIOLATION_DATA = {
   enrolled: true,
   status: 'CURRENT VIOLATION STATUS',
   statusDetail: 'Pending Promissory Note',
   communityServiceHours: 15,
   totalServiceHours: 40,
-  course: 'BS Computer Science',
-  college: 'College of Engineering',
-  yearLevel: '3rd Year',
   studentType: 'Regular',
   history: [
     { type: 'Improper Uniform', date: 'Oct 24, 2023 - 08:30 AM', status: 'Warning', statusColor: 'warning' },
@@ -22,18 +19,100 @@ const MOCK_PROFILE = {
   ]
 };
 
+const formatYearLevel = (level: number) => {
+  switch (level) {
+    case 1: return '1st Year';
+    case 2: return '2nd Year';
+    case 3: return '3rd Year';
+    case 4: return '4th Year';
+    case 5: return '5th Year';
+    default: return `${level}th Year`;
+  }
+};
+
 const ProfileScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  // Location state is preserved here just in case, but we prefer DB fetching
   const location = useLocation();
   const navigationData = location.state?.studentData;
 
+  const [studentData, setStudentData] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStudent = async () => {
+      setLoading(true);
+      setError(null);
+      
+      const searchId = id || navigationData?.studentId;
+
+      if (!searchId) {
+        setError('No Student ID provided.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error: dbError } = await supabase
+          .from('students')
+          .select('*')
+          .eq('student_id', searchId)
+          .single();
+
+        if (dbError) throw dbError;
+        
+        if (data) {
+          setStudentData(data);
+        } else {
+          setError('Student not found in database.');
+        }
+      } catch (err: any) {
+        console.error("Error fetching student:", err);
+        setError('Student not found or database error.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudent();
+  }, [id, navigationData]);
+
+  if (loading) {
+    return (
+      <div className="page-container profile-screen flex items-center justify-center min-h-screen">
+        <Loader2 className="animate-spin text-primary mr-3" size={32} />
+        <span className="text-xl text-primary font-semibold">Retrieving Data...</span>
+      </div>
+    );
+  }
+
+  if (error || !studentData) {
+    return (
+      <div className="page-container profile-screen">
+        <Header title="Student Profile" showBack={true} />
+        <div className="flex flex-col items-center justify-center p-8 mt-12">
+          <TriangleAlert className="text-red-500 mb-4" size={48} />
+          <h2 className="text-2xl font-bold mb-2">Not Found</h2>
+          <p className="text-secondary text-center">
+            {error || `Could not find student with ID: ${id}`}
+          </p>
+          <button className="btn btn-primary mt-6 w-full" onClick={() => navigate(-1)}>
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const profile = {
-    ...MOCK_PROFILE,
-    id: id || navigationData?.studentId || MOCK_PROFILE.id,
-    name: navigationData?.name || MOCK_PROFILE.name,
-    course: navigationData?.course || MOCK_PROFILE.course,
-    college: navigationData?.college || MOCK_PROFILE.college,
+    ...MOCK_VIOLATION_DATA,
+    id: studentData.student_id,
+    name: studentData.name,
+    course: studentData.program,
+    college: studentData.department,
+    yearLevel: formatYearLevel(studentData.year_level),
   };
 
   const progressPercent = ((profile.totalServiceHours - profile.communityServiceHours) / profile.totalServiceHours) * 100;
@@ -48,13 +127,14 @@ const ProfileScreen: React.FC = () => {
 
       <div className="profile-header">
         <div className="avatar-wrapper">
-          <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=John&backgroundColor=242f44" alt="Student Avatar" className="profile-avatar" />
+          {/* Dynamically seeded based on their name to give dummy uniqueness */}
+          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.name.split(' ')[0]}&backgroundColor=242f44`} alt="Student Avatar" className="profile-avatar" />
           <div className="status-indicator online"></div>
         </div>
         <h2 className="profile-name">{profile.name}</h2>
         <div className="profile-badges">
           <span className="badge badge-success">Enrolled</span>
-          <span className="text-secondary text-sm">ID: {id || profile.id}</span>
+          <span className="text-secondary text-sm">ID: {profile.id}</span>
         </div>
       </div>
 
@@ -104,7 +184,7 @@ const ProfileScreen: React.FC = () => {
 
         <button 
           className="btn btn-primary w-full mt-4 flex items-center justify-center gap-2"
-          onClick={() => navigate(`/log-violation/${id || profile.id}`)}
+          onClick={() => navigate(`/log-violation/${profile.id}`)}
         >
           <Edit2 size={18} />
           Log New Violation

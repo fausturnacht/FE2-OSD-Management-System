@@ -3,7 +3,7 @@
  * Applies a grayscale filter then a binarization threshold 
  * to make the gold/yellow text turn pure black against a white background.
  */
-export const preprocessImage = (base64Str: string): Promise<string> => {
+export const preprocessImage = (base64Str: string, threshold: number = 170): Promise<string> => {
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "Anonymous";
@@ -20,9 +20,6 @@ export const preprocessImage = (base64Str: string): Promise<string> => {
       ctx.drawImage(img, 0, 0);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
-
-      // Threshold tuning value. Adjust between 100 to 200 depending on lighting.
-      const threshold = 170; 
 
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];

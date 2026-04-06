@@ -42,6 +42,11 @@ const ManualSearchScreen: React.FC = () => {
             className="search-input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && query.trim() && searchMode === 'id') {
+                navigate(`/profile/${query.trim()}`);
+              }
+            }}
             placeholder={searchMode === 'name' ? 'Enter name' : 'Enter ID number'}
           />
           {query && (
@@ -93,7 +98,17 @@ const ManualSearchScreen: React.FC = () => {
         </div>
       </div>
       
-      <button className="fab-search">
+      <button 
+        className="fab-search"
+        onClick={() => {
+          if (query.trim() && searchMode === 'id') {
+            navigate(`/profile/${query.trim()}`);
+          } else {
+             // For now, in name mode, do nothing or show a toast message (since name search lookup isn't in scope yet)
+             console.log("Name search not yet fully implemented");
+          }
+        }}
+      >
         <Search size={24} />
       </button>
     </div>

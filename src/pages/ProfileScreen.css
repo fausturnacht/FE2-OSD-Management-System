@@ -42,6 +42,11 @@
   background-color: var(--accent-green);
 }
 
+.status-indicator.busy {
+  background-color: var(--accent-red);
+  box-shadow: 0 0 8px var(--accent-red);
+}
+
 .profile-name {
   font-size: 1.5rem;
   font-weight: 700;
@@ -70,6 +75,13 @@
   border-left: 4px solid var(--accent-red);
 }
 
+.violation-card.is-green {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(11, 63, 30, 0.8));
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  box-shadow: 0 10px 25px rgba(34, 197, 94, 0.1);
+  border-left: 4px solid var(--accent-green);
+}
+
 .violation-header {
   display: flex;
   justify-content: space-between;
@@ -83,6 +95,10 @@
   font-weight: 700;
   letter-spacing: 0.05em;
   margin-bottom: 0.25rem;
+}
+
+.violation-card.is-green .violation-label {
+  color: var(--accent-green);
 }
 
 .violation-title {
@@ -114,6 +130,10 @@
   height: 100%;
   background-color: var(--accent-red);
   border-radius: var(--radius-pill);
+}
+
+.violation-card.is-green .progress-bar-fill {
+  background-color: var(--accent-green);
 }
 
 .info-grid {
@@ -156,13 +176,31 @@
 
 .history-item {
   display: flex;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
   background-color: var(--bg-surface);
   padding: 1rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
-  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.history-item:hover {
+  border-color: var(--primary-color);
+  background-color: var(--bg-surface-elevated);
+  transform: translateY(-2px);
+}
+
+.history-item.is-expanded {
+  border-color: var(--primary-color);
+  background-color: var(--bg-surface-elevated);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.history-item-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .history-icon {
@@ -182,4 +220,35 @@
 .bg-danger {
   background-color: rgba(239, 68, 68, 0.15);
   color: var(--accent-red);
+}
+
+.bg-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: var(--accent-green);
+}
+
+.badge-danger {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: var(--accent-red);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-success {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: var(--accent-green);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.detail-group {
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
 }

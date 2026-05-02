@@ -86,7 +86,8 @@ const ScanScreen: React.FC = () => {
       if (data && data.length > 0) {
         setFetchedProfiles(data);
       } else {
-        setPopupData({ id: null, error: 'ID located but not found in the database.' });
+        const idString = ids.length === 1 ? `ID ${ids[0]}` : `IDs ${ids.join(', ')}`;
+        setPopupData({ id: null, error: `${idString} located but not found in the database.` });
         setTimeout(() => {
           setPopupData(null);
           if (scanMethod === 'automatic') {
@@ -113,7 +114,7 @@ const ScanScreen: React.FC = () => {
     setPopupData(null);
     setFetchedProfiles([]);
     const foundIds = new Set<string>();
-    const thresholdsToTest = [100, 140, 180, 220]; // Test 4 standard thresholds
+    const thresholdsToTest = Array.from({ length: 10 }, (_, i) => Math.round(50 + (i * (220 - 50) / 9))); // Test 10 thresholds from 50 to 220
 
     for (let i = 0; i < thresholdsToTest.length; i++) {
       setAutoScanProgress(Math.round(((i) / thresholdsToTest.length) * 100));
@@ -130,8 +131,7 @@ const ScanScreen: React.FC = () => {
           foundIds.add(studentId);
         }
         
-        // Stop early if we found at least one ID
-        if (foundIds.size > 0) break;
+        // Continue scanning through all thresholds to find all possible IDs in the frame
       } catch (err) {
         console.error("OCR error at threshold", t, err);
       }

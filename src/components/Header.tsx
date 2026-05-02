@@ -1,6 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import './Header.css';
+import React from 'react';
 
 interface HeaderProps {
   title: string;
@@ -8,20 +6,15 @@ interface HeaderProps {
   rightAction?: React.ReactNode;
 }
 
-const Header: React.FC<HeaderProps> = ({ title, showBack = false, rightAction }) => {
-  const navigate = useNavigate();
+const Header: React.FC<HeaderProps> = ({ title, rightAction }) => {
 
   return (
-    <header className="app-header">
-      <div className="header-left">
-        {showBack && (
-          <button className="back-btn" onClick={() => navigate(-1)} aria-label="Go back">
-            <ArrowLeft size={24} />
-          </button>
-        )}
+    <header className="flex items-center justify-between px-5 h-16 bg-transparent text-text-primary z-40">
+      <div className="flex items-center w-10">
+        {/* Back button removed per user request */}
       </div>
-      <h1 className="header-title">{title}</h1>
-      <div className="header-right">
+      <h1 className="flex-1 text-center text-lg font-semibold tracking-tight">{title}</h1>
+      <div className="flex items-center w-10 justify-end">
         {rightAction}
       </div>
     </header>

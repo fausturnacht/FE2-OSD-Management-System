@@ -3,7 +3,6 @@ import { TriangleAlert, BookOpen, Building2, Calendar, User, ShieldAlert, Edit2,
 import { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import { supabase } from '../utils/supabaseClient';
-import './ProfileScreen.css';
 
 const formatYearLevel = (level: number) => {
   switch (level) {
@@ -33,10 +32,14 @@ const ProfileScreen: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const searchId = id || navigationData?.studentId;
+      let searchId = id || navigationData?.studentId;
+      
+      if (!searchId) {
+        searchId = localStorage.getItem('activeStudentId');
+      }
 
       if (!searchId) {
-        setError('No Student ID provided.');
+        setError('NO_PROFILE_SELECTED');
         setLoading(false);
         return;
       }
@@ -75,7 +78,7 @@ const ProfileScreen: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="page-container profile-screen flex items-center justify-center min-h-screen">
+      <div className="page-container flex flex-col p-0 items-center justify-center min-h-screen">
         <Loader2 className="animate-spin text-primary mr-3" size={32} />
         <span className="text-xl text-primary font-semibold">Retrieving Data...</span>
       </div>
@@ -83,18 +86,33 @@ const ProfileScreen: React.FC = () => {
   }
 
   if (error || !studentData) {
+    if (error === 'NO_PROFILE_SELECTED') {
+      return (
+        <div className="page-container flex flex-col p-0">
+          <Header title="Student Profile" />
+          <div className="flex flex-col items-center justify-center p-8 mt-24">
+            <User className="text-secondary opacity-50 mb-6" size={64} />
+            <h2 className="text-2xl font-bold mb-2 text-white">No Profile Selected</h2>
+            <p className="text-secondary text-center mb-8">
+              You haven't scanned a student yet. Please scan an ID to view their profile here.
+            </p>
+            <button className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-semibold bg-primary text-white shadow-[0_4px_14px_rgba(59,130,246,0.3)] hover:bg-primary-hover active:scale-95 transition-all w-full max-w-xs" onClick={() => navigate('/scan')}>
+              Scan an ID
+            </button>
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className="page-container profile-screen">
-        <Header title="Student Profile" showBack={true} />
+      <div className="page-container flex flex-col p-0">
+        <Header title="Student Profile" />
         <div className="flex flex-col items-center justify-center p-8 mt-12">
           <TriangleAlert className="text-red-500 mb-4" size={48} />
           <h2 className="text-2xl font-bold mb-2">Not Found</h2>
           <p className="text-secondary text-center">
             {error || `Could not find student with ID: ${id}`}
           </p>
-          <button className="btn btn-primary mt-6 w-full" onClick={() => navigate(-1)}>
-            Go Back
-          </button>
+
         </div>
       </div>
     );
@@ -114,7 +132,7 @@ const ProfileScreen: React.FC = () => {
   // Calculate display properties
   let statusLabel = 'NO UNRESOLVED SANCTIONS';
   let statusDetail = 'Clear Record';
-  let cardThemeClass = 'is-green';
+  let isGreen = true;
   let showProgress = false;
   let showTimer = false;
   let progressPercent = 0;
@@ -123,7 +141,7 @@ const ProfileScreen: React.FC = () => {
   if (hasActiveSanctions && currentSanction) {
     statusLabel = 'ACTIVE SANCTIONS';
     statusDetail = currentSanction.sanction || currentSanction.offense;
-    cardThemeClass = ''; // default red
+    isGreen = false;
     
     if (currentSanction.sanction_type === 'Service') {
       showProgress = true;
@@ -146,39 +164,37 @@ const ProfileScreen: React.FC = () => {
   }
 
   return (
-    <div className="page-container profile-screen animate-fade-in">
+    <div className="page-container flex flex-col p-0 animate-[fadeIn_250ms_ease_forwards]">
       <Header 
         title="Student Profile" 
-        showBack={true}
-        rightAction={<span className="text-primary text-sm font-medium pr-2">Edit</span>} 
       />
 
-      <div className="profile-header">
-        <div className="avatar-wrapper">
-          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${studentData.name.split(' ')[0]}&backgroundColor=242f44`} alt="Student Avatar" className="profile-avatar" />
-          <div className={`status-indicator ${hasActiveSanctions ? 'busy' : 'online'}`}></div>
+      <div className="flex flex-col items-center px-4 py-8">
+        <div className="relative w-24 h-24 rounded-full border-4 border-bg-surface-elevated mb-4 bg-bg-surface-elevated">
+          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${studentData.name.split(' ')[0]}&backgroundColor=242f44`} alt="Student Avatar" className="w-full h-full rounded-full object-cover" />
+          <div className={`absolute bottom-1 right-1 w-4 h-4 rounded-full border-[3px] border-bg-app ${hasActiveSanctions ? 'bg-accent-red shadow-[0_0_8px_var(--color-accent-red)]' : 'bg-accent-green'}`}></div>
         </div>
-        <h2 className="profile-name">{studentData.name}</h2>
-        <div className="profile-badges">
-          <span className="badge badge-success">Enrolled</span>
-          <span className="text-secondary text-sm">ID: {studentData.student_id}</span>
+        <h2 className="text-2xl font-bold mb-2 text-center">{studentData.name}</h2>
+        <div className="flex items-center gap-3">
+          <span className="px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center justify-center bg-accent-green-bg text-accent-green">Enrolled</span>
+          <span className="text-text-secondary text-sm">ID: {studentData.student_id}</span>
         </div>
       </div>
 
-      <div className="profile-content">
-        <div className={`violation-card ${cardThemeClass}`}>
-          <div className="violation-header">
+      <div className="flex-1 px-6 py-4">
+        <div className={`border rounded-2xl p-5 mb-6 border-l-4 ${isGreen ? 'bg-gradient-to-br from-green-500/15 to-[#0b3f1e]/80 border-green-500/30 shadow-[0_10px_25px_rgba(34,197,94,0.1)] border-l-accent-green' : 'bg-gradient-to-br from-red-500/15 to-[#470f0f]/80 border-red-500/30 shadow-[0_10px_25px_rgba(239,68,68,0.1)] border-l-accent-red'}`}>
+          <div className="flex justify-between items-start mb-4">
             <div>
-              <div className="violation-label">{statusLabel}</div>
-              <div className="violation-title">{statusDetail}</div>
+              <div className={`text-xs font-bold tracking-widest mb-1 ${isGreen ? 'text-accent-green' : 'text-accent-red'}`}>{statusLabel}</div>
+              <div className="text-lg font-semibold text-white">{statusDetail}</div>
             </div>
             {hasActiveSanctions ? <TriangleAlert className="text-red-500" size={24} /> : <ShieldAlert className="text-green-500" size={24} />}
           </div>
           
           {(showProgress || showTimer || (currentSanction?.sanction_type === 'Promissory')) && (
-            <div className="service-progress">
-              <div className="progress-labels">
-                <span className="text-xs text-secondary">
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-text-secondary">
                   {showProgress ? 'Community Service Progress' : showTimer ? 'Suspension Countdown' : 'Promissory Note Status'}
                 </span>
                 <span className="text-xs font-semibold text-primary">
@@ -187,8 +203,8 @@ const ProfileScreen: React.FC = () => {
                 </span>
               </div>
               {showProgress && (
-                <div className="progress-bar-bg">
-                  <div className="progress-bar-fill" style={{ width: `${progressPercent}%` }}></div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${isGreen ? 'bg-accent-green' : 'bg-accent-red'}`} style={{ width: `${progressPercent}%` }}></div>
                 </div>
               )}
             </div>
@@ -196,80 +212,80 @@ const ProfileScreen: React.FC = () => {
         </div>
 
         <button 
-          className="btn btn-primary w-full mb-6 flex items-center justify-center gap-2"
+          className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-semibold bg-primary text-white shadow-[0_4px_14px_rgba(59,130,246,0.3)] hover:bg-primary-hover active:scale-95 transition-all w-full mb-6"
           onClick={() => navigate(`/log-violation/${studentData.student_id}`)}
         >
           <Edit2 size={18} />
           Log New Violation
         </button>
 
-        <div className="info-grid">
-          <div className="info-card">
+        <div className="flex flex-col gap-3">
+          <div className="bg-bg-surface rounded-xl px-5 py-4 border border-border-subtle flex flex-col">
             <BookOpen size={16} className="text-primary mb-1" />
-            <div className="info-label">COURSE</div>
-            <div className="info-value">{studentData.program}</div>
+            <div className="text-[0.65rem] text-text-muted font-semibold tracking-widest mb-1">COURSE</div>
+            <div className="text-[0.9rem] font-medium text-text-primary">{studentData.program}</div>
           </div>
-          <div className="info-card">
+          <div className="bg-bg-surface rounded-xl px-5 py-4 border border-border-subtle flex flex-col">
             <Building2 size={16} className="text-primary mb-1" />
-            <div className="info-label">COLLEGE</div>
-            <div className="info-value">{studentData.department}</div>
+            <div className="text-[0.65rem] text-text-muted font-semibold tracking-widest mb-1">COLLEGE</div>
+            <div className="text-[0.9rem] font-medium text-text-primary">{studentData.department}</div>
           </div>
-          <div className="info-card">
+          <div className="bg-bg-surface rounded-xl px-5 py-4 border border-border-subtle flex flex-col">
             <Calendar size={16} className="text-primary mb-1" />
-            <div className="info-label">YEAR LEVEL</div>
-            <div className="info-value">{formatYearLevel(studentData.year_level)}</div>
+            <div className="text-[0.65rem] text-text-muted font-semibold tracking-widest mb-1">YEAR LEVEL</div>
+            <div className="text-[0.9rem] font-medium text-text-primary">{formatYearLevel(studentData.year_level)}</div>
           </div>
-          <div className="info-card">
+          <div className="bg-bg-surface rounded-xl px-5 py-4 border border-border-subtle flex flex-col">
             <User size={16} className="text-primary mb-1" />
-            <div className="info-label">STUDENT TYPE</div>
-            <div className="info-value">Regular</div>
+            <div className="text-[0.65rem] text-text-muted font-semibold tracking-widest mb-1">STUDENT TYPE</div>
+            <div className="text-[0.9rem] font-medium text-text-primary">Regular</div>
           </div>
         </div>
 
-        <div className="history-section">
-          <div className="history-header flex justify-between items-center mb-4">
+        <div className="mt-8 mb-8">
+          <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold text-lg">Violation History</h3>
           </div>
           
-          <div className="history-list flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             {violations.length > 0 ? (
               violations.map((record) => (
                 <div 
                   key={record.id} 
-                  className={`history-item ${expandedViolationId === record.id ? 'is-expanded' : ''}`}
+                  className={`flex flex-col bg-bg-surface p-4 rounded-xl border border-border-subtle cursor-pointer transition-all duration-300 hover:border-primary hover:bg-bg-surface-elevated hover:-translate-y-0.5 ${expandedViolationId === record.id ? 'border-primary bg-bg-surface-elevated shadow-[0_10px_30px_rgba(0,0,0,0.2)]' : ''}`}
                   onClick={() => setExpandedViolationId(expandedViolationId === record.id ? null : record.id)}
                 >
-                  <div className="history-item-main flex items-center gap-4 w-full">
-                    <div className={`history-icon ${record.status === 'Active' ? 'bg-danger' : record.status === 'Record' ? 'bg-warning' : 'bg-success'}`}>
+                  <div className="flex items-center gap-4 w-full">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${record.status === 'Active' ? 'bg-red-500/15 text-accent-red' : record.status === 'Record' ? 'bg-amber-500/15 text-accent-orange' : 'bg-emerald-500/15 text-accent-green'}`}>
                       <ShieldAlert size={20} />
                     </div>
-                    <div className="history-details flex-1">
+                    <div className="flex-1">
                       <div className="font-semibold">{record.type}</div>
-                      <div className="text-xs text-secondary">
+                      <div className="text-xs text-text-secondary">
                         {new Date(record.created_at).toLocaleDateString()}
                       </div>
                     </div>
-                    <div className={`badge ${record.status === 'Active' ? 'badge-danger' : record.status === 'Record' ? 'badge-warning' : 'badge-success'}`}>
+                    <div className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center justify-center ${record.status === 'Active' ? 'bg-red-500/20 text-accent-red border border-red-500/30' : record.status === 'Record' ? 'bg-amber-500/20 text-accent-orange border border-amber-500/30' : 'bg-emerald-500/20 text-accent-green border border-emerald-500/30'}`}>
                       {record.status}
                     </div>
                   </div>
 
                   {expandedViolationId === record.id && (
-                    <div className="history-item-details mt-4 pt-4 border-t border-dashed border-gray-700 animate-fade-in">
+                    <div className="mt-4 pt-4 border-t border-dashed border-gray-700 animate-[fadeIn_250ms_ease_forwards]">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="detail-group">
+                        <div className="flex flex-col">
                           <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Offense</label>
                           <p className="text-sm text-gray-200">{record.offense}</p>
                         </div>
-                        <div className="detail-group">
+                        <div className="flex flex-col">
                           <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Sanction</label>
                           <p className="text-sm text-gray-200">{record.sanction || 'N/A'}</p>
                         </div>
-                        <div className="detail-group">
+                        <div className="flex flex-col">
                           <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Type</label>
                           <p className="text-sm text-gray-200">{record.sanction_type || 'None'}</p>
                         </div>
-                        <div className="detail-group">
+                        <div className="flex flex-col">
                           <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Created At</label>
                           <p className="text-sm text-gray-200">{new Date(record.created_at).toLocaleString()}</p>
                         </div>
@@ -279,7 +295,7 @@ const ProfileScreen: React.FC = () => {
                 </div>
               ))
             ) : (
-              <div className="text-center py-4 text-secondary text-sm">No recorded violations.</div>
+              <div className="text-center py-4 text-text-secondary text-sm">No recorded violations.</div>
             )}
           </div>
         </div>

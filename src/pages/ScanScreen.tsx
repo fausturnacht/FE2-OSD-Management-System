@@ -15,7 +15,7 @@ const ScanScreen: React.FC = () => {
   const [captureStage, setCaptureStage] = useState<'camera' | 'adjusting' | 'auto-scanning'>('camera');
   const [rawImage, setRawImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
-  const [threshold, setThreshold] = useState<number>(170);
+  const [threshold, setThreshold] = useState<number>(128);
   const [isProcessing, setIsProcessing] = useState(false);
   const [popupData, setPopupData] = useState<{ id: string | null, error: string | null } | null>(null);
   
@@ -69,11 +69,12 @@ const ScanScreen: React.FC = () => {
 
   useEffect(() => {
     if (captureStage === 'adjusting' && rawImage) {
-      const updatePreview = async () => {
+      // Debounce rapid slider changes to avoid processing lag
+      const timer = setTimeout(async () => {
         const processed = await preprocessImage(rawImage, threshold);
         setProcessedImage(processed);
-      };
-      updatePreview();
+      }, 60);
+      return () => clearTimeout(timer);
     }
   }, [threshold, rawImage, captureStage]);
 
@@ -101,7 +102,7 @@ const ScanScreen: React.FC = () => {
       if (imageSrc) {
         setRawImage(imageSrc);
         if (scanMethod === 'manual') {
-          setThreshold(170); // reset
+          setThreshold(128); // reset to moderate contrast
           setCaptureStage('adjusting');
         } else {
           setCaptureStage('auto-scanning');
@@ -119,7 +120,7 @@ const ScanScreen: React.FC = () => {
         const result = reader.result as string;
         setRawImage(result);
         if (scanMethod === 'manual') {
-          setThreshold(170);
+          setThreshold(128);
           setCaptureStage('adjusting');
         } else {
           setCaptureStage('auto-scanning');
@@ -176,7 +177,8 @@ const ScanScreen: React.FC = () => {
     setPopupData(null);
     setFetchedProfiles([]);
     const foundIds = new Set<string>();
-    const thresholdsToTest = Array.from({ length: 10 }, (_, i) => Math.round(50 + (i * (220 - 50) / 9))); // Test 10 thresholds from 50 to 220
+    // Test a range of contrast strengths: low (soft) to high (strong)
+    const thresholdsToTest = Array.from({ length: 8 }, (_, i) => Math.round(60 + (i * (230 - 60) / 7)));
 
     for (let i = 0; i < thresholdsToTest.length; i++) {
       setAutoScanProgress(Math.round(((i) / thresholdsToTest.length) * 100));
@@ -319,7 +321,7 @@ const ScanScreen: React.FC = () => {
         <div className="flex-1 flex flex-col relative overflow-hidden bg-black">
           <div className="flex-1 flex items-center justify-center overflow-auto pb-[180px]">
             {processedImage ? (
-              <img src={processedImage} alt="Binarized ID" className="max-w-[95%] max-h-[80%] pt-8 object-contain rounded-md shadow-[0_0_30px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.1)]" />
+              <img src={processedImage} alt="Enhanced ID" className="max-w-[95%] max-h-[80%] pt-8 object-contain rounded-md shadow-[0_0_30px_rgba(0,0,0,0.8),0_0_0_1px_rgba(255,255,255,0.1)]" />
             ) : (
               <div className="text-text-secondary font-medium">Processing...</div>
             )}
@@ -328,7 +330,7 @@ const ScanScreen: React.FC = () => {
           <div className="absolute bottom-4 left-4 right-4 bg-[#192131]/90 backdrop-blur-md border border-border-subtle rounded-xl p-5 flex flex-col gap-5 shadow-[0_-10px_25px_rgba(0,0,0,0.5)] z-50 animate-[slideUp_0.3s_ease-out]">
             <div className="flex flex-col gap-3">
               <label className="text-sm font-medium text-text-secondary text-center">
-                {isProcessing ? "Extracting ID..." : "Slide until the Student ID is legible"}
+                {isProcessing ? "Extracting ID..." : "Adjust contrast until the Student ID is legible"}
               </label>
               <input 
                 type="range" 
@@ -358,7 +360,7 @@ const ScanScreen: React.FC = () => {
                 <ImageIcon size={64} className="mx-auto text-primary opacity-50" />
              </div>
              <h3 className="text-xl font-bold text-white mb-2">Scanning Automatically...</h3>
-             <p className="text-secondary text-sm mb-6">Testing different image thresholds to find an ID.</p>
+             <p className="text-secondary text-sm mb-6">Testing different contrast levels to find an ID.</p>
              <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
                <div className="bg-primary h-full transition-all duration-300" style={{ width: `${autoScanProgress}%` }}></div>
              </div>

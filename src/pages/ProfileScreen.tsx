@@ -124,44 +124,37 @@ const ProfileScreen: React.FC = () => {
     v.sanction_type && 
     v.sanction_type !== 'None'
   );
-  
 
   const hasActiveSanctions = activeSanctions.length > 0;
-  const currentSanction = hasActiveSanctions ? activeSanctions[0] : null;
 
-  // Calculate display properties
-  let statusLabel = 'NO UNRESOLVED SANCTIONS';
-  let statusDetail = 'Clear Record';
-  let isGreen = true;
-  let showProgress = false;
-  let showTimer = false;
-  let progressPercent = 0;
-  let remainderText = '';
+  // Helper to compute display props for each sanction
+  const getSanctionDisplayProps = (sanction: any) => {
+    let showProgress = false;
+    let showTimer = false;
+    let progressPercent = 0;
+    let remainderText = '';
 
-  if (hasActiveSanctions && currentSanction) {
-    statusLabel = 'ACTIVE SANCTIONS';
-    statusDetail = currentSanction.sanction || currentSanction.offense;
-    isGreen = false;
-    
-    if (currentSanction.sanction_type === 'Service') {
+    if (sanction.sanction_type === 'Service') {
       showProgress = true;
-      const total = Number(currentSanction.sanction_total) || 1;
-      const remaining = Number(currentSanction.sanction_remaining) || 0;
+      const total = Number(sanction.sanction_total) || 1;
+      const remaining = Number(sanction.sanction_remaining) || 0;
       progressPercent = Math.max(0, Math.min(100, ((total - remaining) / total) * 100));
-      remainderText = `${remaining} hours remaining`;
-    } else if (currentSanction.sanction_type === 'Suspension' && currentSanction.sanction_end_date) {
+      remainderText = `${remaining} ${sanction.sanction_unit || 'hours'} remaining`;
+    } else if (sanction.sanction_type === 'Suspension' && sanction.sanction_end_date) {
       showTimer = true;
-      const endDate = new Date(currentSanction.sanction_end_date);
+      const endDate = new Date(sanction.sanction_end_date);
       const now = new Date();
       const diffMs = endDate.getTime() - now.getTime();
       const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
       remainderText = diffDays > 0 ? `${diffDays} days remaining` : 'Terminating Today';
-    } else if (currentSanction.sanction_type === 'Promissory') {
+    } else if (sanction.sanction_type === 'Promissory') {
       remainderText = 'Pending Submission';
+    } else if (sanction.sanction_type === 'Expulsion') {
+      remainderText = 'Permanent';
     }
-  } else {
-    statusDetail = 'Good Standing';
-  }
+
+    return { showProgress, showTimer, progressPercent, remainderText };
+  };
 
   return (
     <div className="page-container flex flex-col p-0 animate-[fadeIn_250ms_ease_forwards]">
@@ -176,40 +169,71 @@ const ProfileScreen: React.FC = () => {
         </div>
         <h2 className="text-2xl font-bold mb-2 text-center">{studentData.name}</h2>
         <div className="flex items-center gap-3">
-          <span className="px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center justify-center bg-accent-green-bg text-accent-green">Enrolled</span>
           <span className="text-text-secondary text-sm">ID: {studentData.student_id}</span>
         </div>
       </div>
 
       <div className="flex-1 px-6 py-4">
-        <div className={`border rounded-2xl p-5 mb-6 border-l-4 ${isGreen ? 'bg-gradient-to-br from-green-500/15 to-[#0b3f1e]/80 border-green-500/30 shadow-[0_10px_25px_rgba(34,197,94,0.1)] border-l-accent-green' : 'bg-gradient-to-br from-red-500/15 to-[#470f0f]/80 border-red-500/30 shadow-[0_10px_25px_rgba(239,68,68,0.1)] border-l-accent-red'}`}>
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <div className={`text-xs font-bold tracking-widest mb-1 ${isGreen ? 'text-accent-green' : 'text-accent-red'}`}>{statusLabel}</div>
-              <div className="text-lg font-semibold text-white">{statusDetail}</div>
+        {hasActiveSanctions ? (
+          <div className="flex flex-col gap-3 mb-6">
+            <div className="text-xs font-bold tracking-widest text-accent-red flex items-center gap-2">
+              <TriangleAlert size={14} />
+              {activeSanctions.length} ACTIVE SANCTION{activeSanctions.length > 1 ? 'S' : ''}
             </div>
-            {hasActiveSanctions ? <TriangleAlert className="text-red-500" size={24} /> : <ShieldAlert className="text-green-500" size={24} />}
-          </div>
-          
-          {(showProgress || showTimer || (currentSanction?.sanction_type === 'Promissory')) && (
-            <div className="flex flex-col gap-2">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-text-secondary">
-                  {showProgress ? 'Community Service Progress' : showTimer ? 'Suspension Countdown' : 'Promissory Note Status'}
-                </span>
-                <span className="text-xs font-semibold text-primary">
-                  {showTimer && <Clock size={12} className="inline mr-1" />}
-                  {remainderText}
-                </span>
-              </div>
-              {showProgress && (
-                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${isGreen ? 'bg-accent-green' : 'bg-accent-red'}`} style={{ width: `${progressPercent}%` }}></div>
+            {activeSanctions.map((sanction) => {
+              const { showProgress, showTimer, progressPercent, remainderText } = getSanctionDisplayProps(sanction);
+              return (
+                <div key={sanction.id} className="border rounded-2xl p-5 border-l-4 bg-gradient-to-br from-red-500/15 to-[#470f0f]/80 border-red-500/30 shadow-[0_10px_25px_rgba(239,68,68,0.1)] border-l-accent-red">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="text-[0.65rem] font-semibold text-text-muted tracking-wider uppercase mb-0.5">{sanction.sanction_type}</div>
+                      <div className="text-base font-semibold text-white">{sanction.sanction || sanction.offense}</div>
+                      <div className="text-xs text-text-secondary mt-0.5">{sanction.type} — {sanction.offense}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-text-muted hover:text-primary hover:border-primary transition-all active:scale-90"
+                        onClick={() => navigate(`/edit-violation/${sanction.id}`)}
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <TriangleAlert className="text-red-500 shrink-0" size={20} />
+                    </div>
+                  </div>
+
+                  {(showProgress || showTimer || sanction.sanction_type === 'Promissory' || sanction.sanction_type === 'Expulsion') && (
+                    <div className="flex flex-col gap-2 mt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-text-secondary">
+                          {showProgress ? 'Community Service Progress' : showTimer ? 'Suspension Countdown' : sanction.sanction_type === 'Expulsion' ? 'Status' : 'Promissory Note Status'}
+                        </span>
+                        <span className="text-xs font-semibold text-primary">
+                          {showTimer && <Clock size={12} className="inline mr-1" />}
+                          {remainderText}
+                        </span>
+                      </div>
+                      {showProgress && (
+                        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-accent-red" style={{ width: `${progressPercent}%` }}></div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
+              );
+            })}
+          </div>
+        ) : (
+          <div className="border rounded-2xl p-5 mb-6 border-l-4 bg-gradient-to-br from-green-500/15 to-[#0b3f1e]/80 border-green-500/30 shadow-[0_10px_25px_rgba(34,197,94,0.1)] border-l-accent-green">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="text-xs font-bold tracking-widest mb-1 text-accent-green">NO UNRESOLVED SANCTIONS</div>
+                <div className="text-lg font-semibold text-white">Good Standing</div>
+              </div>
+              <ShieldAlert className="text-green-500" size={24} />
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <button 
           className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-full font-semibold bg-primary text-white shadow-[0_4px_14px_rgba(59,130,246,0.3)] hover:bg-primary-hover active:scale-95 transition-all w-full mb-6"
@@ -235,11 +259,7 @@ const ProfileScreen: React.FC = () => {
             <div className="text-[0.65rem] text-text-muted font-semibold tracking-widest mb-1">YEAR LEVEL</div>
             <div className="text-[0.9rem] font-medium text-text-primary">{formatYearLevel(studentData.year_level)}</div>
           </div>
-          <div className="bg-bg-surface rounded-xl px-5 py-4 border border-border-subtle flex flex-col">
-            <User size={16} className="text-primary mb-1" />
-            <div className="text-[0.65rem] text-text-muted font-semibold tracking-widest mb-1">STUDENT TYPE</div>
-            <div className="text-[0.9rem] font-medium text-text-primary">Regular</div>
-          </div>
+
         </div>
 
         <div className="mt-8 mb-8">

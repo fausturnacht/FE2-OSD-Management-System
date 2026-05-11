@@ -3,6 +3,7 @@ import ScanScreen from './pages/ScanScreen';
 import ProfileScreen from './pages/ProfileScreen';
 import SearchScreen from './pages/SearchScreen';
 import LogViolationScreen from './pages/LogViolationScreen';
+import EditViolationScreen from './pages/EditViolationScreen';
 import BottomNavigation from './components/BottomNavigation';
 import './index.css';
 
@@ -17,6 +18,7 @@ function App() {
           <Route path="/profile" element={<ProfileScreen />} />
           <Route path="/profile/:id" element={<ProfileScreen />} />
           <Route path="/log-violation/:id" element={<LogViolationScreen />} />
+          <Route path="/edit-violation/:violationId" element={<EditViolationScreen />} />
         </Routes>
         <BottomNavigation />
       </HashRouter>

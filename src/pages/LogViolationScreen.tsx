@@ -19,6 +19,7 @@ const LogViolationScreen: React.FC = () => {
   const [sanctionTotal, setSanctionTotal] = useState('');
   const [sanctionUnit, setSanctionUnit] = useState('hours');
   const [sanctionEndDate, setSanctionEndDate] = useState('');
+  const [suspensionMode, setSuspensionMode] = useState<'duration' | 'date'>('duration');
 
   useEffect(() => {
     const fetchStudent = async () => {
@@ -36,6 +37,29 @@ const LogViolationScreen: React.FC = () => {
     };
     fetchStudent();
   }, [id]);
+
+  // Sync duration and end date
+  useEffect(() => {
+    if (sanctionType !== 'Suspension') return;
+
+    if (suspensionMode === 'duration' && sanctionTotal) {
+      const days = parseInt(sanctionTotal);
+      if (!isNaN(days)) {
+        const date = new Date();
+        date.setDate(date.getDate() + days);
+        setSanctionEndDate(date.toISOString().split('T')[0]);
+      }
+    } else if (suspensionMode === 'date' && sanctionEndDate) {
+      const endDate = new Date(sanctionEndDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const diffTime = endDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0) {
+        setSanctionTotal(diffDays.toString());
+      }
+    }
+  }, [sanctionTotal, sanctionEndDate, suspensionMode, sanctionType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,30 +186,52 @@ const LogViolationScreen: React.FC = () => {
           )}
 
           {sanctionType === 'Suspension' && (
-            <div className="flex gap-4 animate-[slideUp_0.3s_ease-out]">
-              <div className="flex flex-col flex-1">
-                <label className="text-xs font-bold text-text-primary mb-2 tracking-widest uppercase">Duration (Days)</label>
-                <input 
-                  type="number" 
-                  className="w-full bg-bg-surface-elevated border border-border-subtle text-text-primary rounded-xl py-3.5 px-4 text-base focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" 
-                  value={sanctionTotal}
-                  onChange={(e) => setSanctionTotal(e.target.value)} 
-                  required
-                />
+            <div className="flex flex-col gap-4 animate-[slideUp_0.3s_ease-out]">
+              <div className="flex p-1 bg-bg-surface-elevated rounded-xl border border-border-subtle">
+                <button 
+                  type="button" 
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${suspensionMode === 'duration' ? 'bg-primary text-white shadow-lg' : 'text-text-muted hover:text-text-secondary'}`}
+                  onClick={() => setSuspensionMode('duration')}
+                >
+                  BY DURATION
+                </button>
+                <button 
+                  type="button" 
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${suspensionMode === 'date' ? 'bg-primary text-white shadow-lg' : 'text-text-muted hover:text-text-secondary'}`}
+                  onClick={() => setSuspensionMode('date')}
+                >
+                  BY END DATE
+                </button>
               </div>
-              <div className="flex flex-col flex-1">
-                <label className="text-xs font-bold text-text-primary mb-2 tracking-widest uppercase">End Date</label>
-                <div className="relative">
-                  <CalendarIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
+
+              {suspensionMode === 'duration' ? (
+                <div className="flex flex-col animate-[fadeIn_200ms_ease]">
+                  <label className="text-xs font-bold text-text-primary mb-2 tracking-widest uppercase ml-1">Duration (Days)</label>
                   <input 
-                    type="date" 
-                    className="w-full bg-bg-surface-elevated border border-border-subtle text-text-primary rounded-xl py-3.5 pl-10 pr-4 text-base focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" 
-                    value={sanctionEndDate}
-                    onChange={(e) => setSanctionEndDate(e.target.value)}
+                    type="number" 
+                    min="1"
+                    className="w-full bg-bg-surface-elevated border border-border-subtle text-text-primary rounded-xl py-3.5 px-4 text-base focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" 
+                    placeholder="e.g. 3"
+                    value={sanctionTotal}
+                    onChange={(e) => setSanctionTotal(e.target.value)} 
                     required
                   />
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col animate-[fadeIn_200ms_ease]">
+                  <label className="text-xs font-bold text-text-primary mb-2 tracking-widest uppercase ml-1">Suspension End Date</label>
+                  <div className="relative">
+                    <CalendarIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" />
+                    <input 
+                      type="date" 
+                      className="w-full bg-bg-surface-elevated border border-border-subtle text-text-primary rounded-xl py-3.5 pl-10 pr-4 text-base focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary" 
+                      value={sanctionEndDate}
+                      onChange={(e) => setSanctionEndDate(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

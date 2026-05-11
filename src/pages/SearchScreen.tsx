@@ -24,7 +24,7 @@ const SearchScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+
   const [department, setDepartment] = useState('All');
   const [program, setProgram] = useState('All');
   const [yearLevel, setYearLevel] = useState('All');
@@ -32,20 +32,8 @@ const SearchScreen: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Calculate items per page dynamically based on vertical resolution
-  useEffect(() => {
-    const calculateLimit = () => {
-      // Approximate height of non-list elements (Header, Title, Search Bar, Navigation, Pagination)
-      const availableHeight = window.innerHeight - 350;
-      // Approximate height of one card including gaps
-      const limit = Math.max(1, Math.floor(availableHeight / 85));
-      setItemsPerPage(limit);
-    };
-
-    calculateLimit();
-    window.addEventListener('resize', calculateLimit);
-    return () => window.removeEventListener('resize', calculateLimit);
-  }, []);
+  // Use a stable items per page to avoid jumping when keyboard appears
+  const [itemsPerPage] = useState(6);
 
   // Debounce query input to avoid spamming the database
   useEffect(() => {
@@ -238,13 +226,14 @@ const SearchScreen: React.FC = () => {
             )}
           </div>
             
-            {loading ? (
-              <div className="flex justify-center my-8">
-                <Loader2 className="animate-spin text-primary" size={32} />
-              </div>
-            ) : results.length > 0 ? (
-              <>
-                <div className="flex flex-col gap-4">
+            <div className="min-h-[400px]">
+              {loading ? (
+                <div className="flex justify-center items-center py-20">
+                  <Loader2 className="animate-spin text-primary" size={32} />
+                </div>
+              ) : results.length > 0 ? (
+                <>
+                  <div className="flex flex-col gap-3 mb-8">
                   {results.map((user) => (
                     <div 
                       key={user.student_id} 
@@ -271,33 +260,53 @@ const SearchScreen: React.FC = () => {
                       <ChevronRight className="text-text-muted" size={20} />
                     </div>
                   ))}
-                </div>
-
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-6 px-2 text-text-muted">
-                    <button 
-                      onClick={() => setPage(p => Math.max(0, p - 1))}
-                      disabled={page === 0}
-                      className="p-2 rounded hover:bg-zinc-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                    >
-                      <ChevronLeft size={24} />
-                    </button>
-                    <span className="text-sm font-medium">Page {page + 1} of {totalPages}</span>
-                    <button 
-                      onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                      disabled={page >= totalPages - 1}
-                      className="p-2 rounded hover:bg-zinc-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                    >
-                      <ChevronRight size={24} />
-                    </button>
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center text-text-muted mt-8">
-                No results found for "{debouncedQuery}"
-              </div>
-            )}
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-auto pt-6 pb-4 border-t border-border-subtle/50 text-text-primary">
+                      <button 
+                        onClick={() => {
+                          setPage(p => Math.max(0, p - 1));
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        disabled={page === 0}
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-bg-surface border border-border-subtle hover:border-primary disabled:opacity-20 disabled:hover:border-border-subtle transition-all active:scale-95"
+                      >
+                        <ChevronLeft size={18} />
+                        <span className="text-sm font-semibold uppercase tracking-wider">Prev</span>
+                      </button>
+                      
+                      <div className="flex flex-col items-center">
+                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-1">Page</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">{page + 1}</span>
+                          <span className="text-xs text-text-muted">of</span>
+                          <span className="text-sm font-bold">{totalPages}</span>
+                        </div>
+                      </div>
+                      
+                      <button 
+                        onClick={() => {
+                          setPage(p => Math.min(totalPages - 1, p + 1));
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        disabled={page >= totalPages - 1}
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-bg-surface border border-border-subtle hover:border-primary disabled:opacity-20 disabled:hover:border-border-subtle transition-all active:scale-95"
+                      >
+                        <span className="text-sm font-semibold uppercase tracking-wider">Next</span>
+                        <ChevronRight size={18} />
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-text-muted bg-bg-surface/30 rounded-3xl border border-dashed border-border-subtle">
+                  <SearchIcon size={40} className="mb-4 opacity-20" />
+                  <p className="text-sm font-medium">No results found for "{debouncedQuery}"</p>
+                  <p className="text-xs mt-1">Try a different name or student ID</p>
+                </div>
+              )}
+            </div>
           </div>
       </div>
       

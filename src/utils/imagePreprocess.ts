@@ -80,14 +80,14 @@ export const preprocessImage = (
       if (radius % 2 === 0) radius++;
 
       // Map strength (0–255) to a contrast factor.
-      //   0   → very soft (factor ≈ 0.3, almost flat gray)
-      //   128 → moderate  (factor ≈ 1.6)
-      //   255 → strong    (factor ≈ 3.0, very high contrast but still not binary)
-      const factor = 0.3 + (strength / 255) * 2.7;
+      //   0   → soft (factor ≈ 0.5)
+      //   128 → moderate (factor ≈ 4.25)
+      //   255 → intense (factor ≈ 8.0, very aggressive contrast)
+      const factor = 0.5 + (strength / 255) * 7.5;
 
       // A small constant (k) biases the local threshold slightly darker
-      // so that thin text strokes aren't washed out. Range ≈ 5–15 depending on strength.
-      const k = 5 + (strength / 255) * 10;
+      // so that thin text strokes aren't washed out. Range ≈ 5–30.
+      const k = 5 + (strength / 255) * 25;
 
       // Step 3 — Adaptive contrast-enhanced output
       const out = srcCtx.createImageData(w, h);

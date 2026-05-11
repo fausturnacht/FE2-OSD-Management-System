@@ -15,7 +15,7 @@ const ScanScreen: React.FC = () => {
   const [captureStage, setCaptureStage] = useState<'camera' | 'adjusting' | 'auto-scanning'>('camera');
   const [rawImage, setRawImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
-  const [threshold, setThreshold] = useState<number>(128);
+  const [threshold, setThreshold] = useState<number>(255);
   const [isProcessing, setIsProcessing] = useState(false);
   const [popupData, setPopupData] = useState<{ id: string | null, error: string | null } | null>(null);
   
@@ -102,7 +102,7 @@ const ScanScreen: React.FC = () => {
       if (imageSrc) {
         setRawImage(imageSrc);
         if (scanMethod === 'manual') {
-          setThreshold(128); // reset to moderate contrast
+          setThreshold(255); // start at max contrast for better legibility
           setCaptureStage('adjusting');
         } else {
           setCaptureStage('auto-scanning');
@@ -120,7 +120,7 @@ const ScanScreen: React.FC = () => {
         const result = reader.result as string;
         setRawImage(result);
         if (scanMethod === 'manual') {
-          setThreshold(128);
+          setThreshold(255);
           setCaptureStage('adjusting');
         } else {
           setCaptureStage('auto-scanning');
@@ -177,8 +177,8 @@ const ScanScreen: React.FC = () => {
     setPopupData(null);
     setFetchedProfiles([]);
     const foundIds = new Set<string>();
-    // Test a range of contrast strengths: low (soft) to high (strong)
-    const thresholdsToTest = Array.from({ length: 8 }, (_, i) => Math.round(60 + (i * (230 - 60) / 7)));
+    // Optimized: 3 shots from top (255) down to 2/3rds (170)
+    const thresholdsToTest = [255, 212, 170];
 
     for (let i = 0; i < thresholdsToTest.length; i++) {
       setAutoScanProgress(Math.round(((i) / thresholdsToTest.length) * 100));

@@ -8,7 +8,6 @@ const EditViolationScreen: React.FC = () => {
   const { violationId } = useParams<{ violationId: string }>();
   const navigate = useNavigate();
   
-  const [violation, setViolation] = useState<any>(null);
   const [student, setStudent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -38,7 +37,6 @@ const EditViolationScreen: React.FC = () => {
           .single();
         
         if (vError) throw vError;
-        setViolation(vData);
         
         // Pre-fill form
         setViolationType(vData.type || '');

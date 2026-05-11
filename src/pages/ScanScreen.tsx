@@ -28,27 +28,45 @@ const ScanScreen: React.FC = () => {
     try {
       // @ts-ignore - access internal video element
       const video = webcamRef.current?.video;
-      if (!video) return;
+      if (!video) {
+        setPopupData({ id: null, error: 'Camera not initialized.' });
+        setTimeout(() => setPopupData(null), 2000);
+        return;
+      }
       
       const stream = video.srcObject as MediaStream;
-      if (!stream) return;
+      if (!stream) {
+        setPopupData({ id: null, error: 'Camera stream not active.' });
+        setTimeout(() => setPopupData(null), 2000);
+        return;
+      }
 
       const track = stream.getVideoTracks()[0];
-      const capabilities = track.getCapabilities() as any;
-
-      if (!capabilities.torch) {
-        setPopupData({ id: null, error: 'Flashlight not supported on this device camera.' });
+      if (!track) {
+        setPopupData({ id: null, error: 'No video track found.' });
         setTimeout(() => setPopupData(null), 2000);
         return;
       }
 
       const nextState = !isTorchOn;
-      await track.applyConstraints({
-        advanced: [{ torch: nextState }]
-      } as any);
-      setIsTorchOn(nextState);
+
+      // Check for capabilities if available, but attempt to apply anyway as fallback
+      const capabilities = typeof track.getCapabilities === 'function' ? track.getCapabilities() : {};
+      
+      try {
+        await track.applyConstraints({
+          advanced: [{ torch: nextState }]
+        } as any);
+        setIsTorchOn(nextState);
+      } catch (err) {
+        console.warn("Could not apply torch constraint:", err);
+        setPopupData({ id: null, error: 'Flashlight toggle failed. Your browser or device might not support this control.' });
+        setTimeout(() => setPopupData(null), 3000);
+      }
     } catch (err) {
       console.error("Error toggling torch:", err);
+      setPopupData({ id: null, error: 'Flashlight error occurred.' });
+      setTimeout(() => setPopupData(null), 2000);
     }
   };
 

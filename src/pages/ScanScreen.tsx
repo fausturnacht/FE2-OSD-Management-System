@@ -50,9 +50,6 @@ const ScanScreen: React.FC = () => {
 
       const nextState = !isTorchOn;
 
-      // Check for capabilities if available, but attempt to apply anyway as fallback
-      const capabilities = typeof track.getCapabilities === 'function' ? track.getCapabilities() : {};
-      
       try {
         await track.applyConstraints({
           advanced: [{ torch: nextState }]

@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import Tesseract from 'tesseract.js';
-import { Image as ImageIcon, RotateCcw, Check, X } from 'lucide-react';
+import { Image as ImageIcon, RotateCcw, Check, X, Flashlight, FlashlightOff } from 'lucide-react';
 import Header from '../components/Header';
 import { supabase } from '../utils/supabaseClient';
 import { preprocessImage } from '../utils/imagePreprocess';
@@ -22,6 +22,35 @@ const ScanScreen: React.FC = () => {
   const [scanMethod, setScanMethod] = useState<'automatic' | 'manual'>('automatic');
   const [fetchedProfiles, setFetchedProfiles] = useState<any[]>([]);
   const [autoScanProgress, setAutoScanProgress] = useState(0);
+  const [isTorchOn, setIsTorchOn] = useState(false);
+
+  const toggleTorch = async () => {
+    try {
+      // @ts-ignore - access internal video element
+      const video = webcamRef.current?.video;
+      if (!video) return;
+      
+      const stream = video.srcObject as MediaStream;
+      if (!stream) return;
+
+      const track = stream.getVideoTracks()[0];
+      const capabilities = track.getCapabilities() as any;
+
+      if (!capabilities.torch) {
+        setPopupData({ id: null, error: 'Flashlight not supported on this device camera.' });
+        setTimeout(() => setPopupData(null), 2000);
+        return;
+      }
+
+      const nextState = !isTorchOn;
+      await track.applyConstraints({
+        advanced: [{ torch: nextState }]
+      } as any);
+      setIsTorchOn(nextState);
+    } catch (err) {
+      console.error("Error toggling torch:", err);
+    }
+  };
 
   useEffect(() => {
     if (captureStage === 'adjusting' && rawImage) {
@@ -32,6 +61,24 @@ const ScanScreen: React.FC = () => {
       updatePreview();
     }
   }, [threshold, rawImage, captureStage]);
+
+  useEffect(() => {
+    return () => {
+      // Cleanup: Turn off torch when leaving
+      if (isTorchOn) {
+        const video = webcamRef.current?.video;
+        if (video) {
+          const stream = video.srcObject as MediaStream;
+          if (stream) {
+            const track = stream.getVideoTracks()[0];
+            if (track && track.getCapabilities && (track.getCapabilities() as any).torch) {
+              track.applyConstraints({ advanced: [{ torch: false }] } as any);
+            }
+          }
+        }
+      }
+    };
+  }, [isTorchOn]);
 
   const handleCapture = useCallback(() => {
     if (webcamRef.current) {
@@ -208,6 +255,15 @@ const ScanScreen: React.FC = () => {
             <div className="absolute bottom-5 left-0 w-full text-center text-text-primary opacity-80 text-sm px-4 bg-black/50 py-2 rounded-sm">
               Focus the camera directly on the student ID numbers
             </div>
+            
+            {/* Flashlight Toggle */}
+            <button 
+              className={`absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center border transition-all z-20 ${isTorchOn ? 'bg-primary border-primary text-white shadow-[0_0_15px_rgba(59,130,246,0.5)]' : 'bg-black/40 border-white/20 text-white hover:bg-black/60'}`}
+              onClick={toggleTorch}
+              title="Toggle Flashlight"
+            >
+              {isTorchOn ? <Flashlight size={24} /> : <FlashlightOff size={24} />}
+            </button>
           </div>
 
           <div className="flex justify-around items-center px-4 pb-12">
